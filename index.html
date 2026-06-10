@@ -1,0 +1,1151 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart PWA Dashboard</title>
+
+  <!-- SEO Meta Tags -->
+  <meta name="description"
+    content="A tablet-optimized smart dashboard displaying real-time clock, local weather, and battery metrics. Features glassmorphism designs and offline PWA capability.">
+  <meta name="theme-color" content="#0a0f1d">
+
+  <!-- Manifest & Favicon/App Icon Link -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+
+  <!-- Google Fonts for Premium Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap"
+    rel="stylesheet">
+
+  <style>
+    /* CSS custom properties for theme adjustments */
+    :root {
+      --app-brightness: 1;
+      --bg-color: #0c1020;
+      --bg-image: url('https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?auto=format&fit=crop&w=1920&q=80');
+      /* Default abstract high-quality bg */
+      --clock-text-color: #00f2fe;
+      --card-bg: rgba(15, 23, 42, 0.45);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --text-main: #ffffff;
+      --text-muted: #94a3b8;
+      --accent: #4facfe;
+      --accent-glow: rgba(79, 172, 254, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: 'Montserrat', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      overflow: hidden;
+      filter: brightness(var(--app-brightness));
+      position: relative;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Beautiful Dynamic Background Container */
+    #app-bg {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -2;
+      background-color: var(--bg-color);
+      background-image: var(--bg-image);
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      transition: background-image 0.5s ease-in-out, background-color 0.5s ease-in-out;
+    }
+
+    /* Ambient color overlay to enrich background aesthetics */
+    #bg-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      background: radial-gradient(circle at 80% 20%, rgba(112, 0, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 10% 80%, rgba(0, 242, 254, 0.1) 0%, transparent 50%);
+      pointer-events: none;
+    }
+
+    /* Header Styling */
+    header {
+      width: 100%;
+      padding: 24px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .brand-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      opacity: 0.9;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    /* Simple Header Battery status */
+    .header-battery {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 6px 14px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+
+    .header-battery svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* Settings Gear Button */
+    .settings-trigger {
+      background: rgba(255, 255, 255, 0.08);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      color: white;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .settings-trigger:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: rotate(45deg);
+      border-color: rgba(255, 255, 255, 0.3);
+      box-shadow: 0 0 15px rgba(255, 255, 255, 0.2);
+    }
+
+    .settings-trigger:active {
+      transform: scale(0.92) rotate(45deg);
+    }
+
+    .settings-trigger svg {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+    }
+
+    /* Dashboard Grid Container (Landscape Optimized) */
+    .dashboard-container {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 30px;
+      padding: 0 40px 40px 40px;
+      max-width: 1600px;
+      width: 100%;
+      margin: 0 auto;
+      align-items: stretch;
+      z-index: 5;
+    }
+
+    /* Glassmorphism Dashboard Cards */
+    .glass-card {
+      background: var(--card-bg);
+      backdrop-filter: blur(24px) saturate(140%);
+      -webkit-backdrop-filter: blur(24px) saturate(140%);
+      border: 1px solid var(--card-border);
+      border-radius: 28px;
+      padding: 35px;
+      box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3);
+      transition: border 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .glass-card:hover {
+      border-color: rgba(255, 255, 255, 0.18);
+      box-shadow: 0 16px 50px 0 rgba(0, 0, 0, 0.4);
+      transform: translateY(-2px);
+    }
+
+    /* Clock & Date Widget Style */
+    .clock-widget {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Ambient Glow behind clock */
+    .clock-glow {
+      position: absolute;
+      width: 300px;
+      height: 100px;
+      background: var(--clock-text-color);
+      filter: blur(80px);
+      opacity: 0.15;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .clock-time {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 7.5rem;
+      font-weight: 400;
+      color: var(--clock-text-color);
+      text-shadow: 0 0 30px rgba(var(--clock-color-rgb, 0, 242, 254), 0.35);
+      line-height: 1;
+      letter-spacing: -2px;
+      margin-bottom: 15px;
+      z-index: 1;
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+    }
+
+    .clock-ampm {
+      font-size: 2.2rem;
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 500;
+      margin-left: 10px;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-main);
+      opacity: 0.8;
+      text-shadow: none;
+    }
+
+    .clock-date {
+      font-size: 1.35rem;
+      font-weight: 400;
+      color: var(--text-main);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      opacity: 0.85;
+      z-index: 1;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding-top: 15px;
+      display: inline-block;
+      width: 80%;
+    }
+
+    /* Right Section Widget Layout */
+    .widgets-section {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      justify-content: space-between;
+    }
+
+    /* Live Weather Card Style */
+    .weather-widget {
+      flex: 1.2;
+      position: relative;
+    }
+
+    .weather-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 15px;
+    }
+
+    .weather-location-box {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .weather-city {
+      font-size: 1.6rem;
+      font-weight: 600;
+      color: var(--text-main);
+      margin-bottom: 4px;
+    }
+
+    .weather-country {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--text-muted);
+    }
+
+    .weather-sync-status {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+
+    .weather-body {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 15px;
+    }
+
+    .weather-temp-container {
+      display: flex;
+      align-items: baseline;
+    }
+
+    .weather-temp {
+      font-size: 3.5rem;
+      font-weight: 300;
+      line-height: 1;
+    }
+
+    .weather-temp-unit {
+      font-size: 1.8rem;
+      font-weight: 400;
+      color: var(--accent);
+      margin-left: 2px;
+    }
+
+    .weather-icon-box {
+      width: 80px;
+      height: 80px;
+      filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.2));
+    }
+
+    .weather-icon-box svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .weather-desc {
+      font-size: 1.1rem;
+      font-weight: 500;
+      text-transform: capitalize;
+      color: var(--text-main);
+      margin-bottom: 20px;
+    }
+
+    .weather-details-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 15px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      padding-top: 18px;
+    }
+
+    .weather-detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .weather-detail-label {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-muted);
+    }
+
+    .weather-detail-val {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    /* Battery Card Style */
+    .battery-widget {
+      flex: 0.8;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .battery-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .battery-title {
+      font-size: 1rem;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .battery-status-text {
+      font-size: 0.85rem;
+      font-weight: 500;
+      padding: 4px 10px;
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      transition: all 0.3s ease;
+    }
+
+    .battery-body {
+      display: flex;
+      align-items: center;
+      gap: 25px;
+    }
+
+    .battery-visual {
+      position: relative;
+      width: 70px;
+      height: 110px;
+      border: 4px solid var(--text-muted);
+      border-radius: 14px;
+      padding: 4px;
+      display: flex;
+      align-items: flex-end;
+      transition: border-color 0.3s ease;
+    }
+
+    /* Battery top positive tip */
+    .battery-visual::after {
+      content: '';
+      position: absolute;
+      top: -10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 24px;
+      height: 6px;
+      background: var(--text-muted);
+      border-radius: 4px 4px 0 0;
+      transition: background-color 0.3s ease;
+    }
+
+    .battery-level-fill {
+      width: 100%;
+      height: 50%;
+      /* Controlled by Javascript */
+      background: linear-gradient(180deg, #10b981 0%, #059669 100%);
+      border-radius: 6px;
+      transition: height 0.5s cubic-bezier(0.4, 0, 0.2, 1), background 0.5s ease;
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.3);
+      position: relative;
+    }
+
+    .battery-level-fill.charging {
+      background: linear-gradient(180deg, #00f2fe 0%, #4facfe 100%);
+      box-shadow: 0 0 15px rgba(0, 242, 254, 0.4);
+    }
+
+    .battery-level-fill.warning {
+      background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+      box-shadow: 0 0 15px rgba(245, 158, 11 0.3);
+    }
+
+    .battery-level-fill.danger {
+      background: linear-gradient(180deg, #ef4444 0%, #dc2626 100%);
+      box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    @keyframes pulse {
+      0% {
+        opacity: 0.6;
+      }
+
+      100% {
+        opacity: 1;
+      }
+    }
+
+    .battery-info {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .battery-percent {
+      font-size: 3rem;
+      font-weight: 300;
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .battery-time-remaining {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* Slider / Scrim Settings Panel Styles */
+    .scrim {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(4, 6, 12, 0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 99;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s ease;
+    }
+
+    .scrim.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .settings-panel {
+      position: fixed;
+      top: 0;
+      right: -420px;
+      width: 400px;
+      height: 100vh;
+      background: rgba(10, 15, 30, 0.85);
+      backdrop-filter: blur(35px) saturate(180%);
+      -webkit-backdrop-filter: blur(35px) saturate(180%);
+      border-left: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: -15px 0 35px rgba(0, 0, 0, 0.6);
+      z-index: 100;
+      transition: right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow-y: auto;
+      padding: 35px 30px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .settings-panel.open {
+      right: 0;
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding-bottom: 15px;
+    }
+
+    .settings-title {
+      font-size: 1.3rem;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .settings-close-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .settings-close-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      transform: scale(1.05);
+    }
+
+    .settings-close-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    /* Settings Control Form Groups */
+    .setting-section {
+      margin-bottom: 25px;
+    }
+
+    .setting-section-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--accent);
+      margin-bottom: 15px;
+      border-left: 3px solid var(--accent);
+      padding-left: 8px;
+    }
+
+    .setting-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+
+    .setting-item-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .setting-label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-main);
+    }
+
+    .setting-desc {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: -4px;
+      margin-bottom: 4px;
+    }
+
+    /* Style Range Slider */
+    .slider-container {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      width: 100%;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255, 255, 255, 0.15);
+      outline: none;
+      transition: background 0.3s ease;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: var(--accent);
+      cursor: pointer;
+      transition: transform 0.1s ease, box-shadow 0.1s ease;
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 0 15px var(--accent);
+    }
+
+    .slider-val {
+      font-size: 0.85rem;
+      font-weight: 600;
+      width: 35px;
+      text-align: right;
+    }
+
+    /* Custom Color Picker Styling */
+    .color-picker-wrapper {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    input[type="color"] {
+      -webkit-appearance: none;
+      border: none;
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      cursor: pointer;
+      background: none;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper {
+      padding: 0;
+    }
+
+    input[type="color"]::-webkit-color-swatch {
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 50%;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Settings Text & URL inputs */
+    input[type="text"],
+    input[type="url"] {
+      width: 100%;
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: white;
+      font-family: inherit;
+      font-size: 0.85rem;
+      outline: none;
+      transition: all 0.3s ease;
+    }
+
+    input[type="text"]:focus,
+    input[type="url"]:focus {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.1);
+      box-shadow: 0 0 10px var(--accent-glow);
+    }
+
+    /* Segmented Control / Button Toggles (Tabs style) */
+    .segmented-control {
+      display: flex;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 4px;
+      width: 100%;
+    }
+
+    .segmented-btn {
+      flex: 1;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      padding: 10px;
+      font-family: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .segmented-btn.active {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 4px 12px var(--accent-glow);
+    }
+
+    /* Sub-panels (e.g. background sections, weather city) */
+    .sub-panel {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 15px;
+      margin-top: 10px;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      animation: fadeIn 0.3s ease forwards;
+    }
+
+    .sub-panel.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-5px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Save Settings Button */
+    .save-btn {
+      background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 14px;
+      font-family: inherit;
+      font-weight: 700;
+      font-size: 0.9rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      cursor: pointer;
+      margin-top: 15px;
+      box-shadow: 0 6px 20px rgba(0, 242, 254, 0.25);
+      transition: all 0.3s ease;
+    }
+
+    .save-btn:hover {
+      box-shadow: 0 8px 25px rgba(0, 242, 254, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .save-btn:active {
+      transform: translateY(1px);
+    }
+
+    /* Offline Toast Banner */
+    #offline-banner {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%) translateY(100px);
+      background: rgba(239, 68, 68, 0.85);
+      backdrop-filter: blur(12px);
+      color: white;
+      padding: 10px 24px;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 8px 30px rgba(239, 68, 68, 0.3);
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+      z-index: 1000;
+    }
+
+    #offline-banner.active {
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* Responsive adjustments for portrait tablets and mobile screen */
+    @media (max-width: 1024px) {
+      body {
+        overflow-y: auto;
+      }
+
+      .dashboard-container {
+        grid-template-columns: 1fr;
+        padding: 0 20px 20px 20px;
+        gap: 20px;
+      }
+
+      header {
+        padding: 20px;
+      }
+
+      .clock-time {
+        font-size: 5.5rem;
+      }
+
+      .clock-ampm {
+        font-size: 1.8rem;
+      }
+
+      .settings-panel {
+        width: 100%;
+        right: -100%;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .clock-time {
+        font-size: 4rem;
+      }
+
+      .clock-date {
+        font-size: 1rem;
+      }
+
+      .weather-body {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+      }
+
+      .weather-details-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Background Layer -->
+  <div id="app-bg"></div>
+  <div id="bg-overlay"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-title" id="logo">Lenin's Dashboard</div>
+    <div class="header-actions">
+      <!-- Fast battery read -->
+      <div class="header-battery" id="header-battery-widget" title="Battery Status">
+        <svg viewBox="0 0 24 24" id="header-battery-icon" fill="currentColor">
+          <path
+            d="M17 5H16V3H8V5H7C5.9 5 5 5.9 5 7V20C5 21.1 5.9 22 7 22H17C18.1 22 19 21.1 19 20V7C19 5.9 18.1 5 17 5Z"
+            opacity="0.3" />
+          <path
+            d="M17 5H16V3H8V5H7C5.9 5 5 5.9 5 7V20C5 21.1 5.9 22 7 22H17C18.1 22 19 21.1 19 20V7C19 5.9 18.1 5 17 5Z"
+            id="header-battery-level-path" />
+        </svg>
+        <span id="header-battery-val">--%</span>
+      </div>
+      <!-- Settings gear trigger -->
+      <button class="settings-trigger" id="settings-open" aria-label="Open Settings">
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M19.43 12.98C19.47 12.66 19.5 12.34 19.5 12C19.5 11.66 19.47 11.34 19.43 11.02L21.54 9.37C21.73 9.22 21.78 8.95 21.66 8.73L19.66 5.27C19.54 5.05 19.27 4.97 19.05 5.05L16.56 6.05C16.04 5.66 15.47 5.34 14.86 5.08L14.48 2.42C14.46 2.18 14.25 2 14 2H10C9.75 2 9.54 2.18 9.52 2.42L9.14 5.08C8.53 5.34 7.96 5.66 7.44 6.05L4.95 5.05C4.73 4.97 4.46 5.05 4.34 5.27L2.34 8.73C2.21 8.95 2.27 9.22 2.46 9.37L4.57 11.02C4.53 11.34 4.5 11.66 4.5 12C4.5 12.34 4.53 12.66 4.57 12.98L2.46 14.63C2.27 14.78 2.22 15.05 2.34 15.27L4.34 18.73C4.46 18.95 4.73 19.03 4.95 18.95L7.44 17.95C7.96 18.34 8.53 18.66 9.14 18.92L9.52 21.58C9.54 21.82 9.75 22 10 22H14C14.25 22 14.46 21.82 14.48 21.58L14.86 18.92C15.47 18.66 16.04 18.34 16.56 17.95L19.05 18.95C19.27 19.03 19.54 18.95 19.66 18.73L21.66 15.27C21.78 15.05 21.73 14.78 21.54 14.63L19.43 12.98ZM12 15.5C10.07 15.5 8.5 13.93 8.5 12C8.5 10.07 10.07 8.5 12 8.5C13.93 8.5 15.5 10.07 15.5 12C15.5 13.93 13.93 15.5 12 15.5Z" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Dashboard Grid Layout -->
+  <main class="dashboard-container">
+
+    <!-- Left Widget: Clock and Date -->
+    <section class="glass-card clock-widget">
+      <div class="clock-glow"></div>
+      <div class="clock-time" id="clock-display">
+        12:00:00<span class="clock-ampm" id="clock-ampm">AM</span>
+      </div>
+      <div class="clock-date" id="date-display">Tuesday, June 9, 2026</div>
+    </section>
+
+    <!-- Right Widgets Section -->
+    <section class="widgets-section">
+
+      <!-- Live Weather Card -->
+      <div class="glass-card weather-widget">
+        <div class="weather-header">
+          <div class="weather-location-box">
+            <span class="weather-city" id="weather-city">Loading Weather...</span>
+            <span class="weather-country" id="weather-country">Searching location</span>
+          </div>
+          <span class="weather-sync-status" id="weather-sync">Syncing</span>
+        </div>
+        <div class="weather-body">
+          <div class="weather-temp-container">
+            <span class="weather-temp" id="weather-temp">--</span>
+            <span class="weather-temp-unit" id="weather-unit-lbl">°C</span>
+          </div>
+          <div class="weather-icon-box" id="weather-icon">
+            <!-- Default placeholder icon (Sun behind cloud SVG) -->
+            <svg viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="18" fill="#e0f2fe" opacity="0.3" />
+            </svg>
+          </div>
+        </div>
+        <div class="weather-desc" id="weather-desc">Reading data...</div>
+
+        <div class="weather-details-grid">
+          <div class="weather-detail-item">
+            <span class="weather-detail-label">Feels Like</span>
+            <span class="weather-detail-val" id="weather-feels">--</span>
+          </div>
+          <div class="weather-detail-item">
+            <span class="weather-detail-label">Humidity</span>
+            <span class="weather-detail-val" id="weather-humidity">--</span>
+          </div>
+          <div class="weather-detail-item">
+            <span class="weather-detail-label">Wind Speed</span>
+            <span class="weather-detail-val" id="weather-wind">--</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Battery Status Card -->
+      <div class="glass-card battery-widget">
+        <div class="battery-header">
+          <span class="battery-title">System Power</span>
+          <span class="battery-status-text" id="battery-status">Detecting...</span>
+        </div>
+        <div class="battery-body">
+          <div class="battery-visual" id="battery-visual-box">
+            <div class="battery-level-fill" id="battery-fill" style="height: 0%;"></div>
+          </div>
+          <div class="battery-info">
+            <span class="battery-percent" id="battery-pct-big">--%</span>
+            <span class="battery-time-remaining" id="battery-time-lbl">Checking remaining time...</span>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <!-- Sliding Settings Panel Overlay Scrim -->
+  <div class="scrim" id="settings-scrim"></div>
+
+  <!-- Settings Panel -->
+  <aside class="settings-panel" id="settings-sidebar">
+    <div class="settings-header">
+      <h2 class="settings-title">Configuration</h2>
+      <button class="settings-close-btn" id="settings-close" aria-label="Close Settings">
+        <svg viewBox="0 0 24 24">
+          <path
+            d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12 19 6.41Z" />
+        </svg>
+      </button>
+    </div>
+
+    <!-- Scrollable configuration form -->
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 5px;">
+
+      <!-- Section 1: Display -->
+      <div class="setting-section">
+        <h3 class="setting-section-title">Display &amp; Brightness</h3>
+        <div class="setting-item">
+          <div class="setting-item-row" style="margin-bottom: 0;">
+            <label class="setting-label" for="brightness-slider">Dimmer Control</label>
+            <span class="slider-val" id="brightness-val">100%</span>
+          </div>
+          <p class="setting-desc">Adjust screen filter brightness for night viewing.</p>
+          <div class="slider-container">
+            <input type="range" id="brightness-slider" min="20" max="100" value="100">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: Aesthetics -->
+      <div class="setting-section">
+        <h3 class="setting-section-title">Background</h3>
+        <div class="setting-item">
+          <label class="setting-label">Wallpaper Source</label>
+          <div class="segmented-control" id="bg-source-toggle">
+            <button class="segmented-btn active" data-source="color">Solid Color</button>
+            <button class="segmented-btn" data-source="image">Image URL</button>
+          </div>
+
+          <!-- Solid Color Panel -->
+          <div class="sub-panel active" id="bg-color-panel">
+            <div class="setting-item-row" style="margin-bottom: 0;">
+              <span class="setting-label">Choose Color</span>
+              <div class="color-picker-wrapper">
+                <input type="color" id="bg-color-picker" value="#0c1020">
+              </div>
+            </div>
+          </div>
+
+          <!-- Image URL Panel -->
+          <div class="sub-panel" id="bg-image-panel">
+            <label class="setting-label" for="bg-image-url">Image Web URL</label>
+            <input type="url" id="bg-image-url" placeholder="https://images.unsplash.com/... or base64">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: Clock Style -->
+      <div class="setting-section">
+        <h3 class="setting-section-title">Typography &amp; Style</h3>
+        <div class="setting-item-row">
+          <label class="setting-label" for="clock-color-picker">Clock Color</label>
+          <div class="color-picker-wrapper">
+            <input type="color" id="clock-color-picker" value="#00f2fe">
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: System Formats -->
+      <div class="setting-section">
+        <h3 class="setting-section-title">Regional Formats</h3>
+
+        <div class="setting-item">
+          <label class="setting-label">Time Representation</label>
+          <div class="segmented-control" id="time-format-toggle">
+            <button class="segmented-btn active" data-format="12h">12-Hour</button>
+            <button class="segmented-btn" data-format="24h">24-Hour</button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">Display Seconds</label>
+          <div class="segmented-control" id="show-seconds-toggle">
+            <button class="segmented-btn active" data-show="true">Show</button>
+            <button class="segmented-btn" data-show="false">Hide</button>
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label" for="date-format-select">Date Layout</label>
+          <select id="date-format-select">
+            <option value="MM/DD/YYYY">MM / DD / YYYY</option>
+            <option value="DD/MM/YYYY">DD / MM / YYYY</option>
+            <option value="YYYY/MM/DD">YYYY / MM / DD</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Section 5: Weather Configuration -->
+      <div class="setting-section">
+        <h3 class="setting-section-title">Weather Settings</h3>
+
+        <div class="setting-item">
+          <label class="setting-label" for="weather-key-input">OpenWeatherMap API Key</label>
+          <input type="text" id="weather-key-input" placeholder="Paste OpenWeatherMap API Key">
+          <p class="setting-desc" style="margin-top: 4px;">Get a free key at openweathermap.org</p>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">Location Detection</label>
+          <div class="segmented-control" id="weather-loc-toggle">
+            <button class="segmented-btn active" data-mode="gps">GPS Location</button>
+            <button class="segmented-btn" data-mode="manual">Manual City</button>
+          </div>
+
+          <!-- Manual City Input Panel -->
+          <div class="sub-panel" id="weather-manual-panel">
+            <label class="setting-label" for="weather-city-input">Target City</label>
+            <input type="text" id="weather-city-input" placeholder="e.g. London, London, GB">
+          </div>
+        </div>
+
+        <div class="setting-item">
+          <label class="setting-label">Temperature Unit</label>
+          <div class="segmented-control" id="weather-unit-toggle">
+            <button class="segmented-btn active" data-unit="metric">Celsius (°C)</button>
+            <button class="segmented-btn" data-unit="imperial">Fahrenheit (°F)</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <button class="save-btn" id="save-settings-btn">Apply Changes</button>
+    </div>
+  </aside>
+
+  <!-- Offline Status Notification Banner -->
+  <div id="offline-banner">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+      <path
+        d="M23.64 5.7C23.09 5.26 21.05 3.61 17 3.03V5.09C19.74 5.61 21.36 6.84 21.61 7.04L12 19L2.39 7.04C2.64 6.84 4.26 5.61 7 5.09V3.03C2.95 3.61 0.91 5.26 0.36 5.7C-0.2 6.13 -0.09 6.96 0.44 7.63L11.08 20.89C11.54 21.46 12.46 21.46 12.92 20.89L23.56 7.63C24.09 6.96 24.2 6.13 23.64 5.7Z"
+        opacity="0.3" />
+      <path
+        d="M12 9C9.7 9 7.6 9.8 6 11.2L11 17.5C11.5 18.1 12.5 18.1 13 17.5L18 11.2C16.4 9.8 14.3 9 12 9ZM12 3C11.3 3 10.7 3.1 10 3.2V5.2C10.7 5.1 11.3 5 12 5C15.3 5 18.4 6.3 20.7 8.5L22.1 6.8C19.5 4.4 15.9 3 12 3ZM12 0C10.7 0 9.3 0.2 8 0.6V2.7C9.3 2.2 10.6 2 12 2C16.9 2 21.4 3.9 24.7 7L26 5.3C22.3 2 17.4 0 12 0ZM4 0.6C2.7 0.2 1.3 0 0 0L1.3 5.3L6 2.7V0.6Z"
+        fill="currentColor" />
+    </svg>
+    <span>Offline Mode - Cached Data Displayed</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>
