@@ -26,7 +26,9 @@ const DEFAULTS = {
   weatherManualCity: '',
   weatherApiKey: '',
   weatherUnit: 'metric', // 'metric' (C) or 'imperial' (F)
-  showSeconds: true
+  showSeconds: true,
+  showWeather: true,
+  showBattery: true
 };
 
 // Global config object loaded from localStorage
@@ -218,6 +220,8 @@ function applySettings() {
   // 4. Regional Formats (Time/Date)
   syncSegmentedControls('time-format-toggle', config.timeFormat);
   syncSegmentedControls('show-seconds-toggle', config.showSeconds ? 'true' : 'false');
+  syncSegmentedControls('show-weather-toggle', config.showWeather ? 'true' : 'false');
+  syncSegmentedControls('show-battery-toggle', config.showBattery ? 'true' : 'false');
   document.getElementById('date-format-select').value = config.dateFormat;
 
   // 5. Weather Config
@@ -227,9 +231,80 @@ function applySettings() {
   document.getElementById('weather-city-input').value = config.weatherManualCity;
   syncSegmentedControls('weather-unit-toggle', config.weatherUnit);
 
+  // 6. Show / Hide weather card
+  const weatherCard = document.querySelector('.weather-widget');
+  if (weatherCard) {
+    if (config.showWeather) {
+      weatherCard.style.display = '';
+      weatherCard.style.opacity = '1';
+      weatherCard.style.transform = 'scaleY(1)';
+    } else {
+      weatherCard.style.opacity = '0';
+      weatherCard.style.transform = 'scaleY(0)';
+      // Collapse after animation finishes
+      setTimeout(() => {
+        if (!config.showWeather) weatherCard.style.display = 'none';
+      }, 350);
+      // Cancel any pending weather refresh
+      if (weatherTimeout) {
+        clearTimeout(weatherTimeout);
+        weatherTimeout = null;
+      }
+    }
+  }
+
+  // 7. Show / Hide battery card
+  const batteryCard = document.querySelector('.battery-widget');
+  if (batteryCard) {
+    if (config.showBattery) {
+      batteryCard.style.display = '';
+      batteryCard.style.opacity = '1';
+      batteryCard.style.transform = 'scaleY(1)';
+    } else {
+      batteryCard.style.opacity = '0';
+      batteryCard.style.transform = 'scaleY(0)';
+      setTimeout(() => {
+        if (!config.showBattery) batteryCard.style.display = 'none';
+      }, 350);
+    }
+  }
+
+  // 8. Update clock layout based on visible widgets
+  updateClockLayout();
+
   // Run initial updates for clock and weather immediately
   updateClock();
-  fetchWeather();
+  if (config.showWeather) {
+    fetchWeather();
+  }
+}
+
+// Resize clock card based on how many right-column widgets are visible
+function updateClockLayout() {
+  const clockCard = document.querySelector('.clock-widget');
+  const widgetsSection = document.querySelector('.widgets-section');
+  if (!clockCard || !widgetsSection) return;
+
+  const bothHidden = !config.showWeather && !config.showBattery;
+  const oneHidden  = (!config.showWeather) !== (!config.showBattery); // XOR
+
+  // Reset state classes
+  clockCard.classList.remove('clock-md', 'clock-xl');
+
+  if (bothHidden) {
+    // Full-width hero clock
+    clockCard.classList.add('clock-xl');
+    // Delay hiding the section until battery/weather animations finish
+    setTimeout(() => { widgetsSection.style.display = 'none'; }, 360);
+  } else {
+    // Ensure section is visible
+    widgetsSection.style.display = '';
+    if (oneHidden) {
+      // One widget still showing — medium clock
+      clockCard.classList.add('clock-md');
+    }
+    // Both visible — normal (no extra class needed)
+  }
 }
 
 // Helpers for Toggle button rendering (Segmented Controls)
@@ -621,6 +696,8 @@ function initSettingsUI() {
   setupSegmentedClick('weather-unit-toggle');
   setupSegmentedClick('time-format-toggle');
   setupSegmentedClick('show-seconds-toggle');
+  setupSegmentedClick('show-weather-toggle');
+  setupSegmentedClick('show-battery-toggle');
 
   function setupSegmentedClick(containerId, callback) {
     const container = document.getElementById(containerId);
@@ -658,6 +735,12 @@ function initSettingsUI() {
     config.showSeconds = showSecondsBtn ? showSecondsBtn.dataset.show === 'true' : DEFAULTS.showSeconds;
 
     config.dateFormat = document.getElementById('date-format-select').value;
+
+    const showWeatherBtn = document.querySelector('#show-weather-toggle .segmented-btn.active');
+    config.showWeather = showWeatherBtn ? showWeatherBtn.dataset.show === 'true' : DEFAULTS.showWeather;
+
+    const showBatteryBtn = document.querySelector('#show-battery-toggle .segmented-btn.active');
+    config.showBattery = showBatteryBtn ? showBatteryBtn.dataset.show === 'true' : DEFAULTS.showBattery;
 
     config.weatherApiKey = document.getElementById('weather-key-input').value;
 
