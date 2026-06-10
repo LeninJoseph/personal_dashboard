@@ -286,7 +286,7 @@ function updateClockLayout() {
   if (!clockCard || !widgetsSection) return;
 
   const bothHidden = !config.showWeather && !config.showBattery;
-  const oneHidden  = (!config.showWeather) !== (!config.showBattery); // XOR
+  const oneHidden = (!config.showWeather) !== (!config.showBattery); // XOR
 
   // Reset state classes
   clockCard.classList.remove('clock-md', 'clock-xl');
@@ -370,8 +370,10 @@ function updateClock() {
 
   // Format Date
   const days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const month = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const dayName = days[date.getDay()];
   const mm = padZero(date.getMonth() + 1);
+  const mmm = month[date.getMonth() + 1];
   const dd = padZero(date.getDate());
   const yyyy = date.getFullYear();
 
@@ -383,9 +385,15 @@ function updateClock() {
     case 'YYYY/MM/DD':
       dateStr = `${dayName}, ${yyyy}/${mm}/${dd}`;
       break;
+    case 'DD-MMM-yyyy':
+      dateStr = `${dayName} \n\n ${dd}-${mmm}-${yyyy}`;
+      break;
+    case 'MMM DD, YYYY':
+      dateStr = `${dayName} \n\n ${mmm} ${dd}, ${yyyy}`;
+      break;
     case 'MM/DD/YYYY':
     default:
-      dateStr = `${dayName}, ${mm}/${dd}/${yyyy}`;
+      dateStr = `${dayName} \n\n ${mm}/${dd}/${yyyy}`;
       break;
   }
 
